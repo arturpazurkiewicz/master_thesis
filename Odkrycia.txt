@@ -1,0 +1,15 @@
+Moje przemyślenia:
+
+Pozyskanie transakcji:
+- bardzo ciężko wykorzystać aktualne api biedronki w celu pozyskania w łatwy sposób listy zakupów (udało mi się to dokonać w 70% ale wymagane są zaawansowane kroki, których zwykły użytkownik nie będzie w stanie powtórzyć - zatrzymywanie wykonywania js w odpowiednim miejscu, modyfikacja zmiennych)
+- pdf generowany przez biedronkę jest zdjęciem przerobionym na pdf - wymagane jest OCR
+- wykorzystałem bibliotekę flutter_tesseract_ocr (tesseract dla fluttera) z polskim datasetem i wyniki póki co są bardzo odbiecujące. Po zaprzągnięciu dodatkowej biblioteki do zdjęcia z PDF, nie powinno być z tym zagadnieniem problemu. Tym bardziej, że ponieważ paragony mają z góry określony szablon.
+
+Uwspólnienie listy zakupów
+- jeśli chcielibyśmy przechowywać dane globalne (wszystkie transakcje), wtedy najlepszy do tego byłby oddzielny serwer synchronizacyjny (posiadam taką możliwość) lub firebase
+- jeśli chcielibyśmy mieć możliwość tworzenia listy zakupów poza aplikacją, technologicznie nic nie stoi na przeszkodzie w wykorzystaniu dokumentów google. Trochę czasu to zajmie ale można stworzyć coś na zasadzie interaktywnego excela, którego będzie aktualizowała działająca aplikacja. Pierwszy arkusz posiadałby wszystkie produkty zakupione przez użytkownika. Drugi arkusz byłby aktualną listą zakupową użytkownika. Aplikacja wspierałaby użytkownika sugerując mu dane produkty poprzez odczytywanie i aktualizowanie danych z google docs
+
+Analiza zakupowa:
+- dotychczasowo rozważałem algorytm K-NN dla tego problemu. Znalazłem artykuł: https://arxiv.org/abs/2103.14200 który raczej potwierdza sensowność tego algorytmu dla zadanego problemu
+- wykorzystanie reguł asocjacyjnych dla zadanego przedziału czasowego (wartości reguł asocjacyjnych mogłyby się w łatwy i zrozumiały sposób wyświetlać użytkownikowi)
+- fajnie by było przedstawo
