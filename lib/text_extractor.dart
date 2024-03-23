@@ -1,6 +1,8 @@
 import 'dart:ffi';
 
+import 'package:biedronka_extractor/model/product.dart';
 import 'package:biedronka_extractor/model/recipe.dart';
+import 'package:biedronka_extractor/model/recipe_entry_full.dart';
 import 'package:biedronka_extractor/model/recipe_full.dart';
 import 'package:intl/intl.dart';
 
@@ -21,13 +23,15 @@ class TextExtractor {
   final RegExp itemRegex = RegExp(r'^(?<name>[\S ]*?\S)\s+\w\s+(?<value>\d+\.\d+)\s*x', multiLine: true);
 
   RecipeFull extractRecipe(String text, DateTime time) {
-    List<RecipeEntry> result = [];
+    List<RecipeEntryFull> result = [];
     var matches = itemRegex.allMatches(text);
     for (var match in matches) {
       String? name = match.namedGroup("name");
       String? value = match.namedGroup("value");
       if (name != null && value != null) {
-        // result.add(RecipeEntry(null, name, double.parse(value), -1)); TODO fix
+        var recipeEntry = RecipeEntry(null, -1, double.parse(value), -1);
+        var product = Product(null, name);
+        result.add(RecipeEntryFull(recipeEntry, product));
       }
     }
 

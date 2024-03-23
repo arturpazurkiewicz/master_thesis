@@ -5,7 +5,7 @@ import 'package:floor/floor.dart';
 ])
 final class Product {
   @PrimaryKey(autoGenerate: true)
-  final int? id;
+  int? id;
   final String name;
 
   Product(this.id, this.name);

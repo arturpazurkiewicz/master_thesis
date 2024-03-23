@@ -65,6 +65,8 @@ class _$FlutterDatabase extends FlutterDatabase {
 
   RecipeEntryDao? _recipeEntryDaoInstance;
 
+  ProductDao? _productDaoInstance;
+
   Future<sqflite.Database> open(
     String path,
     List<Migration> migrations, [
@@ -89,7 +91,11 @@ class _$FlutterDatabase extends FlutterDatabase {
         await database.execute(
             'CREATE TABLE IF NOT EXISTS `Recipe` (`id` INTEGER PRIMARY KEY AUTOINCREMENT, `time` INTEGER NOT NULL)');
         await database.execute(
-            'CREATE TABLE IF NOT EXISTS `RecipeEntry` (`id` INTEGER PRIMARY KEY AUTOINCREMENT, `name` TEXT NOT NULL, `amount` REAL NOT NULL, `recipeId` INTEGER NOT NULL, FOREIGN KEY (`recipeId`) REFERENCES `Recipe` (`id`) ON UPDATE NO ACTION ON DELETE CASCADE)');
+            'CREATE TABLE IF NOT EXISTS `RecipeEntry` (`id` INTEGER PRIMARY KEY AUTOINCREMENT, `productId` INTEGER NOT NULL, `amount` REAL NOT NULL, `recipeId` INTEGER NOT NULL, FOREIGN KEY (`recipeId`) REFERENCES `Recipe` (`id`) ON UPDATE NO ACTION ON DELETE CASCADE, FOREIGN KEY (`productId`) REFERENCES `Product` (`id`) ON UPDATE NO ACTION ON DELETE NO ACTION)');
+        await database.execute(
+            'CREATE TABLE IF NOT EXISTS `Product` (`id` INTEGER PRIMARY KEY AUTOINCREMENT, `name` TEXT NOT NULL)');
+        await database.execute(
+            'CREATE UNIQUE INDEX `index_Product_name` ON `Product` (`name`)');
 
         await callback?.onCreate?.call(database, version);
       },
@@ -106,6 +112,11 @@ class _$FlutterDatabase extends FlutterDatabase {
   RecipeEntryDao get recipeEntryDao {
     return _recipeEntryDaoInstance ??=
         _$RecipeEntryDao(database, changeListener);
+  }
+
+  @override
+  ProductDao get productDao {
+    return _productDaoInstance ??= _$ProductDao(database, changeListener);
   }
 }
 
@@ -160,7 +171,7 @@ class _$RecipeEntryDao extends RecipeEntryDao {
             'RecipeEntry',
             (RecipeEntry item) => <String, Object?>{
                   'id': item.id,
-                  'name': item.name,
+                  'productId': item.productId,
                   'amount': item.amount,
                   'recipeId': item.recipeId
                 });
@@ -179,7 +190,7 @@ class _$RecipeEntryDao extends RecipeEntryDao {
         'SELECT * FROM RecipeEntry ORDER BY time DESC',
         mapper: (Map<String, Object?> row) => RecipeEntry(
             row['id'] as int?,
-            row['name'] as String,
+            row['productId'] as int,
             row['amount'] as double,
             row['recipeId'] as int));
   }
@@ -190,7 +201,7 @@ class _$RecipeEntryDao extends RecipeEntryDao {
         'SELECT * FROM RecipeEntry WHERE recipeId = ?1 ORDER BY id',
         mapper: (Map<String, Object?> row) => RecipeEntry(
             row['id'] as int?,
-            row['name'] as String,
+            row['productId'] as int,
             row['amount'] as double,
             row['recipeId'] as int),
         arguments: [recipeId]);
@@ -206,6 +217,55 @@ class _$RecipeEntryDao extends RecipeEntryDao {
   Future<void> insertAllRecipeData(List<RecipeEntry> data) async {
     await _recipeEntryInsertionAdapter.insertList(
         data, OnConflictStrategy.abort);
+  }
+}
+
+class _$ProductDao extends ProductDao {
+  _$ProductDao(
+    this.database,
+    this.changeListener,
+  )   : _queryAdapter = QueryAdapter(database),
+        _productInsertionAdapter = InsertionAdapter(
+            database,
+            'Product',
+            (Product item) =>
+                <String, Object?>{'id': item.id, 'name': item.name});
+
+  final sqflite.DatabaseExecutor database;
+
+  final StreamController<String> changeListener;
+
+  final QueryAdapter _queryAdapter;
+
+  final InsertionAdapter<Product> _productInsertionAdapter;
+
+  @override
+  Future<Product?> getProduct(int id) async {
+    return _queryAdapter.query('SELECT * FROM Product WHERE id=?1',
+        mapper: (Map<String, Object?> row) =>
+            Product(row['id'] as int?, row['name'] as String),
+        arguments: [id]);
+  }
+
+  @override
+  Future<Product?> getProductByName(String name) async {
+    return _queryAdapter.query('SELECT * FROM Product WHERE name=?1',
+        mapper: (Map<String, Object?> row) =>
+            Product(row['id'] as int?, row['name'] as String),
+        arguments: [name]);
+  }
+
+  @override
+  Future<List<Product>> getAllProducts() async {
+    return _queryAdapter.queryList('SELECT * FROM Product ORDER BY id',
+        mapper: (Map<String, Object?> row) =>
+            Product(row['id'] as int?, row['name'] as String));
+  }
+
+  @override
+  Future<int> insertProduct(Product entryData) {
+    return _productInsertionAdapter.insertAndReturnId(
+        entryData, OnConflictStrategy.abort);
   }
 }
 

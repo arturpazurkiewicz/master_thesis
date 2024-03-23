@@ -8,12 +8,15 @@ import 'package:floor/floor.dart';
 import 'converter/date_time_converter.dart';
 import 'package:sqflite/sqflite.dart' as sqflite;
 
+import 'dao/product_dao.dart';
+import 'model/product.dart';
 import 'model/recipe.dart';
 
 part 'database_impl.g.dart';
 
-@Database(version: 1, entities: [Recipe, RecipeEntry])
+@Database(version: 1, entities: [Recipe, RecipeEntry, Product])
 abstract class FlutterDatabase extends FloorDatabase{
   RecipeDao get recipeDao;
   RecipeEntryDao get recipeEntryDao;
+  ProductDao get productDao;
 }

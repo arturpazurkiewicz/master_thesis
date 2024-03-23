@@ -11,9 +11,9 @@ import 'product.dart';
 class RecipeEntry {
   @PrimaryKey(autoGenerate: true)
   final int? id;
-  final int productId;
+  int productId;
   final double amount;
-  final int recipeId;
+  int recipeId;
 
   RecipeEntry(this.id, this.productId, this.amount, this.recipeId);
 
