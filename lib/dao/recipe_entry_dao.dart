@@ -6,6 +6,7 @@ import '../model/recipe_entry.dart';
 abstract class RecipeEntryDao{
   @insert
   Future<void> insertRecipeData(RecipeEntry entryData);
+
   @insert
   Future<void> insertAllRecipeData(List<RecipeEntry> data);
 
@@ -14,4 +15,7 @@ abstract class RecipeEntryDao{
 
   @Query('SELECT * FROM RecipeEntry WHERE recipeId = :recipeId ORDER BY id')
   Future<List<RecipeEntry>> getForRecipeId(int recipeId);
+
+  @delete
+  Future<void> deleteRecipeEntry(RecipeEntry recipeEntry);
 }

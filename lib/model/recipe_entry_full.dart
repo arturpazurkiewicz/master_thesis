@@ -1,4 +1,3 @@
-
 import 'package:biedronka_extractor/model/product.dart';
 import 'package:biedronka_extractor/model/recipe_entry.dart';
 

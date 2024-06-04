@@ -15,13 +15,15 @@ abstract class ProductDao {
   @Query('SELECT * FROM Product ORDER BY id')
   Future<List<Product>> getAllProducts();
 
-  Future<Product> getProductOrInsert(Product newProduct) async {
-    var product = await getProductByName(newProduct.name);
+  @Query('SELECT * FROM Product WHERE id in (:ids) ORDER BY name')
+  Future<List<Product>> getProducts(List<int> ids);
+
+  Future<Product> getProductOrInsert(String name) async {
+    var product = await getProductByName(name);
     if (product == null) {
-      var id = await insertProduct(newProduct);
-      newProduct.id = id;
-      product = newProduct;
+      product = Product(null, name);
+      product.id = await insertProduct(product);
     }
-      return product;
+    return product;
   }
 }

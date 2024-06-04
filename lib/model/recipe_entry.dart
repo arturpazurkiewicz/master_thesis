@@ -1,5 +1,6 @@
-import 'package:floor/floor.dart';
 import 'package:biedronka_extractor/model/recipe.dart';
+import 'package:floor/floor.dart';
+
 import '../converter/date_time_converter.dart';
 import 'product.dart';
 

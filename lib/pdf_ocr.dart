@@ -1,14 +1,15 @@
 import 'dart:io';
-import 'package:biedronka_extractor/model/recipe.dart';
+
+import 'package:biedronka_extractor/algorithm_factory/apriori_factory.dart';
 import 'package:biedronka_extractor/model/recipe_full.dart';
 import 'package:biedronka_extractor/my_database.dart';
 import 'package:biedronka_extractor/text_extractor.dart';
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_tesseract_ocr/android_ios.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:pdfx/pdfx.dart';
-import 'package:file_picker/file_picker.dart';
 
 void main() {
   runApp(MyApp());
@@ -35,9 +36,6 @@ class PdfOcr extends StatefulWidget {
 }
 
 class _PdfOcrState extends State<PdfOcr> {
-  String _ocrText = '';
-
-  // List<Widget> _pages = List.empty();
   List<RecipeFull> _recipes = List.empty();
 
   @override
@@ -83,7 +81,6 @@ class _PdfOcrState extends State<PdfOcr> {
     final String filePath = '${tempDir.path}/temporary_image.png';
     var text = '';
 
-    // List<Widget> pages = [];
     for (var i = 1; i <= document.pagesCount; i++) {
       if (i != 1) {
         document = await PdfDocument.openFile(file.path!);
@@ -105,12 +102,10 @@ class _PdfOcrState extends State<PdfOcr> {
     return null;
   }
 
-  void calculateApriori(){
-    var list = _recipes.sublist(0,2);
-    // var apriori = Apriori(list, 0.1, 0.1);
-    // var result = apriori.run();
-    // print(result);
-    // apriori.main();
+  void calculateApriori() {
+    var apriori = AprioriFactory(1);
+    apriori.preprocess(_recipes);
+    print(apriori);
   }
 
   @override

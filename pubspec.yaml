@@ -30,6 +30,8 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  flutter_localizations:
+    sdk: flutter
   flutter_tesseract_ocr: ^0.4.23
   image_picker: ^1.0.0
   pdfx: ^2.5.0
@@ -40,7 +42,7 @@ dependencies:
 
 
   fl_chart: ^0.55.0
-  intl: ^0.17.0
+  intl: ^0.18.0
   either_dart: ^0.1.4
   google_sign_in: ^6.1.4
   dio: ^5.2.1+1
@@ -48,6 +50,7 @@ dependencies:
   path_provider: ^2.1.1
   file_picker: ^5.0.0
   floor: ^1.4.2
+  loading_indicator: ^3.1.1
 
 
   # The following adds the Cupertino Icons font to your application.
