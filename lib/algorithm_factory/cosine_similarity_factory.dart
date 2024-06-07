@@ -1,3 +1,5 @@
+import 'package:biedronka_extractor/algorithm_factory/preprocessed_algorithm.dart';
+
 import '../algorithm/cosine_similarity.dart';
 import '../model/recipe_full.dart';
 import 'algorithm.dart';
@@ -15,7 +17,8 @@ class CosineSimilarityFactory extends Algorithm {
   }
 
   @override
-  void preprocess(List<RecipeFull> transactions) {
+  PreprocessedAlgorithm preprocess(List<RecipeFull> transactions) {
     algorithm = CosineSimilarity(transactions);
+    return this;
   }
 }

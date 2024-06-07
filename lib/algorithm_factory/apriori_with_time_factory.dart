@@ -1,3 +1,5 @@
+import 'package:biedronka_extractor/algorithm_factory/preprocessed_algorithm.dart';
+
 import '../algorithm/apriori_with_time.dart';
 import '../model/recipe_full.dart';
 import 'algorithm.dart';
@@ -14,9 +16,10 @@ class AprioriWithTimeFactory extends Algorithm {
   }
 
   @override
-  void preprocess(List<RecipeFull> transactions) {
+  PreprocessedAlgorithm preprocess(List<RecipeFull> transactions) {
     algorithm = AprioriWithTime(minSupport, transactions);
     algorithm!.process();
+    return this;
   }
 
   @override

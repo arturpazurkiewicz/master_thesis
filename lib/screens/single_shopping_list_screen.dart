@@ -2,14 +2,29 @@ import 'package:biedronka_extractor/algorithm_factory/apriori_factory.dart';
 import 'package:biedronka_extractor/algorithm_factory/apriori_with_time_factory.dart';
 import 'package:biedronka_extractor/algorithm_factory/cosine_similarity_factory.dart';
 import 'package:biedronka_extractor/algorithm_factory/knn_factory.dart';
+import 'package:biedronka_extractor/algorithm_factory/unprocessed_algorithm.dart';
 import 'package:biedronka_extractor/model/product.dart';
 import 'package:biedronka_extractor/model/shopping_list_full.dart';
 import 'package:biedronka_extractor/my_database.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
-import '../algorithm_factory/algorithm.dart';
+import '../algorithm_factory/preprocessed_algorithm.dart';
+import '../model/recipe_full.dart';
 import '../model/shopping_list_entry_full.dart';
 import 'components/add_product_dialog.dart';
+
+enum AlgorithmStatus { idle, preprocessing, processing }
+
+class AlgorithmState {
+  final String name;
+  final UnprocessedAlgorithm unprocessedAlgorithm;
+  PreprocessedAlgorithm? preprocessedAlgorithm;
+  List<String> results = [];
+  AlgorithmStatus status = AlgorithmStatus.preprocessing;
+
+  AlgorithmState(this.name, this.unprocessedAlgorithm);
+}
 
 class SingleShoppingListScreen extends StatefulWidget {
   final ShoppingListFull shoppingList;
@@ -26,17 +41,22 @@ class _SingleShoppingListScreenState extends State<SingleShoppingListScreen> {
   final TextEditingController _productAmountController = TextEditingController();
   List<String> _productNames = [];
   Map<int, String> _productIdsToNames = {};
+  bool _isExpanded = false;
 
-  final List<Algorithm> algorithms = [AprioriFactory(2.0), AprioriWithTimeFactory(2.0), CosineSimilarityFactory(7), KNNFactory(7)];
-  final List<String> algorithmNames = ['Apriori', 'Apriori z czasem', 'Podobieństwo kosinusowe', 'KNN'];
-  final Map<String, List<String>> algorithmResults = {};
+  final List<AlgorithmState> algorithms = [
+    AlgorithmState('Apriori', AprioriFactory(1.0)),
+    AlgorithmState('Apriori z czasem', AprioriWithTimeFactory(1.0)),
+    AlgorithmState('Podobieństwo kosinusowe', CosineSimilarityFactory(7)),
+    AlgorithmState('KNN', KNNFactory(7)),
+  ];
 
   @override
   void initState() {
     super.initState();
     _shoppingList = widget.shoppingList;
-    _loadProductNames();
-    _preprocessAlgorithms();
+    _loadProductNames().then((_) {
+      _preprocessAlgorithms();
+    });
   }
 
   Future<void> _loadProductNames() async {
@@ -89,28 +109,73 @@ class _SingleShoppingListScreenState extends State<SingleShoppingListScreen> {
     );
   }
 
-  void _preprocessAlgorithms() {
+  Future<void> _preprocessAlgorithms() async {
     // Pobranie wszystkich transakcji z bazy danych
-    MyDatabase.getAllRecipes().then((transactions) {
-      for (var algorithm in algorithms) {
-        algorithm.preprocess(transactions);
-      }
-    });
+    List<RecipeFull> transactions = await MyDatabase.getAllRecipes();
+    for (var algorithm in algorithms) {
+      setState(() {
+        algorithm.status = AlgorithmStatus.preprocessing;
+      });
+      print('Preprocessing ${algorithm.name}...');
+      var futurePreprocessedAlgorithm = compute(_runPreprocess, _PreprocessParams(algorithm.unprocessedAlgorithm, transactions));
+      futurePreprocessedAlgorithm.then((preprocessedAlgorithm) {
+        setState(() {
+          algorithm.preprocessedAlgorithm = preprocessedAlgorithm;
+          algorithm.status = AlgorithmStatus.idle;
+        });
+        print('${algorithm.name} preprocessing completed.');
+        _proposeProductsForAlgorithm(algorithm); // Proponowanie produktów dla przetworzonego algorytmu
+      });
+    }
+  }
+
+  static PreprocessedAlgorithm _runPreprocess(_PreprocessParams params) {
+    return params.algorithm.preprocess(params.transactions);
+  }
+
+  Future<List<String>> _calculateProductsInIsolate(_AlgorithmParams params) async {
+    final proposedProducts = await compute(_runAlgorithm, params);
+    return proposedProducts.map((e) => params.productIdsToNames[e]!).toList();
+  }
+
+  static Set<int> _runAlgorithm(_AlgorithmParams params) {
+    return params.algorithm.calculate(params.currentProducts, params.shoppingDate);
   }
 
   void _proposeProducts() {
-    Set<int> currentProducts = _shoppingList.entries.map((e) => e.product.id!).toSet();
-    DateTime shoppingDate = _shoppingList.shoppingList.date;
+    algorithms.forEach((algorithmState) {
+      _proposeProductsForAlgorithm(algorithmState);
+    });
+  }
 
-    for (int i = 0; i < algorithms.length; i++) {
-      var algorithm = algorithms[i];
-      Set<int> proposedProducts = algorithm.calculate(currentProducts, shoppingDate);
-      List<String> productNames = proposedProducts.map((e) => _productIdsToNames[e]!).toList();
+  void _proposeProductsForAlgorithm(AlgorithmState algorithmState) {
+    final algorithmName = algorithmState.name;
+    final preprocessedAlgorithm = algorithmState.preprocessedAlgorithm;
+
+    if (preprocessedAlgorithm == null || !_isExpanded) {
+      return;
+    }
+
+    setState(() {
+      algorithmState.status = AlgorithmStatus.processing;
+    });
+
+    print('Calculating $algorithmName...');
+
+    final params = _AlgorithmParams(
+      preprocessedAlgorithm,
+      _shoppingList.entries.map((e) => e.product.id!).toSet(),
+      _shoppingList.shoppingList.date,
+      _productIdsToNames,
+    );
+    _calculateProductsInIsolate(params).then((productNames) {
       productNames.sort();
       setState(() {
-        algorithmResults[algorithmNames[i]] = productNames;
+        algorithmState.results = productNames;
+        algorithmState.status = AlgorithmStatus.idle;
       });
-    }
+      print('$algorithmName calculation completed.');
+    });
   }
 
   @override
@@ -130,6 +195,7 @@ class _SingleShoppingListScreenState extends State<SingleShoppingListScreen> {
           ExpansionTile(
             title: const Text("Propozycje"),
             onExpansionChanged: (bool expanded) {
+              _isExpanded = expanded;
               if (expanded) {
                 _proposeProducts(); // Przelicz propozycje po otwarciu sekcji
               }
@@ -140,15 +206,21 @@ class _SingleShoppingListScreenState extends State<SingleShoppingListScreen> {
                 child: Wrap(
                   spacing: 4.0,
                   runSpacing: 8.0,
-                  children: algorithmNames.map((name) {
-                    final products = algorithmResults[name] ?? [];
+                  children: algorithms.map((algorithmState) {
+                    final algorithmName = algorithmState.name;
+                    final products = algorithmState.results;
                     return Container(
                       width: (MediaQuery.of(context).size.width - 32) / 2, // 2 kolumny z odstępem
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(name, style: const TextStyle(fontWeight: FontWeight.bold)),
-                          ...products.map((product) => Text(product)).toList(),
+                          Text(algorithmName, style: const TextStyle(fontWeight: FontWeight.bold)),
+                          if (algorithmState.status == AlgorithmStatus.preprocessing)
+                            const Text("Obliczanie...")
+                          else if (algorithmState.status == AlgorithmStatus.processing)
+                            const Text("Szacowanie...")
+                          else
+                            ...products.map((product) => Text(product)).toList(),
                         ],
                       ),
                     );
@@ -181,4 +253,20 @@ class _SingleShoppingListScreenState extends State<SingleShoppingListScreen> {
       ),
     );
   }
+}
+
+class _PreprocessParams {
+  final UnprocessedAlgorithm algorithm;
+  final List<RecipeFull> transactions;
+
+  _PreprocessParams(this.algorithm, this.transactions);
+}
+
+class _AlgorithmParams {
+  final PreprocessedAlgorithm algorithm;
+  final Set<int> currentProducts;
+  final DateTime shoppingDate;
+  final Map<int, String> productIdsToNames;
+
+  _AlgorithmParams(this.algorithm, this.currentProducts, this.shoppingDate, this.productIdsToNames);
 }
