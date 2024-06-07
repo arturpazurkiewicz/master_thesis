@@ -37,7 +37,7 @@ class HomeScreen extends StatelessWidget {
               icon: Icons.settings,
               label: 'Ustawienia',
               onPressed: () {
-                // Navigate to settings screen
+                Navigator.pushNamed(context, '/settings');
               },
             ),
           ],

@@ -107,7 +107,12 @@ class MyDatabase {
 
   static Future<void> insertShoppingListEntry(ShoppingList shoppingList, Product product, double amount) async {
     var db = await _getInstance();
-    await db.shoppingListEntryDao.insertShoppingListEntry(ShoppingListEntry(null, product.id!, shoppingList.id!, amount));
+    await db.shoppingListEntryDao.insertShoppingListEntry(ShoppingListEntry(null, product.id!, shoppingList.id!, amount, false));
+  }
+
+  static Future<void> updateShoppingListEntry(ShoppingListEntry shoppingListEntry) async {
+    var db = await _getInstance();
+    await db.shoppingListEntryDao.updateShoppingListEntry(shoppingListEntry);
   }
 
   static Future<void> deleteShoppingListEntry(ShoppingListEntry entry) async {
@@ -118,5 +123,25 @@ class MyDatabase {
   static Future<int> getShoppingListItemCount(int shoppingListId) async {
     var db = await _getInstance();
     return (await db.shoppingListDao.getShoppingListItemCount(shoppingListId))!;
+  }
+
+  @transaction
+  static Future<void> mergeProducts(String mainProductName, List<int> secondaryProductIds) async {
+    var db = await _getInstance();
+
+    // Pobierz ID głównego produktu
+    final Product? mainProduct = await db.productDao.getProductByName(mainProductName);
+
+    if (mainProduct == null) {
+      return;
+    }
+
+    var toReplace = await db.productDao.getProducts(secondaryProductIds);
+
+    // Zaktualizuj wszystkie RecipeEntry, które mają secondaryProductIds
+    await db.recipeEntryDao.replaceProducts(mainProduct.id!, toReplace.map((e) => e.id!).toList());
+    await db.shoppingListEntryDao.replaceProductsInShopping(mainProduct.id!, toReplace.map((e) => e.id!).toList());
+    // Usuń scalone produkty
+    await db.productDao.deleteProducts(toReplace);
   }
 }

@@ -59,7 +59,7 @@ class _SingleTransactionScreenState extends State<SingleTransactionScreen> {
 
   void _showAddProductDialog() {
     _productNameController.clear();
-    _productAmountController.clear();
+    _productAmountController.text = "1";
 
     showDialog(
       context: context,

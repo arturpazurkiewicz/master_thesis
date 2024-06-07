@@ -7,6 +7,9 @@ abstract class ShoppingListEntryDao {
   @insert
   Future<int> insertShoppingListEntry(ShoppingListEntry shoppingListEntry);
 
+  @update
+  Future<void> updateShoppingListEntry(ShoppingListEntry shoppingListEntry);
+
   @Query('SELECT * FROM ShoppingListEntry WHERE id = :id')
   Future<ShoppingListEntry?> getShoppingListEntry(int id);
 
@@ -27,4 +30,7 @@ abstract class ShoppingListEntryDao {
 
   @Query('DELETE FROM ShoppingListEntry WHERE productId = :productId')
   Future<void> deleteShoppingListEntriesByProductId(int productId);
+
+  @Query('UPDATE ShoppingListEntry SET productId = :newProduct WHERE productId in (:toReplace)')
+  Future<void> replaceProductsInShopping(int newProduct, List<int> toReplace);
 }

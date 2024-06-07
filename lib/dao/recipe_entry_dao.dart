@@ -18,4 +18,7 @@ abstract class RecipeEntryDao{
 
   @delete
   Future<void> deleteRecipeEntry(RecipeEntry recipeEntry);
+
+  @Query('UPDATE RecipeEntry SET productId = :newProduct WHERE productId in (:toReplace)')
+  Future<void> replaceProducts(int newProduct, List<int> toReplace);
 }

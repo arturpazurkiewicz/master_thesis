@@ -26,4 +26,7 @@ abstract class ProductDao {
     }
     return product;
   }
+
+  @delete
+  Future<void> deleteProducts(List<Product> products);
 }

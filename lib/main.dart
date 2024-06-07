@@ -1,21 +1,30 @@
 import 'package:biedronka_extractor/screens/home_screen.dart';
+import 'package:biedronka_extractor/screens/settings_screen.dart';
 import 'package:biedronka_extractor/screens/shopping_screen.dart';
 import 'package:biedronka_extractor/screens/transaction_screen.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 
 main() {
-  runApp(MaterialApp(home: MyApp(), localizationsDelegates: const [
+  WidgetsFlutterBinding.ensureInitialized();
+  SystemChrome.setPreferredOrientations([
+    DeviceOrientation.portraitUp,
+    DeviceOrientation.portraitDown,
+  ]);
+  runApp(const MaterialApp(home: MyApp(), localizationsDelegates: [
     GlobalMaterialLocalizations.delegate,
     GlobalWidgetsLocalizations.delegate,
     GlobalCupertinoLocalizations.delegate,
-  ], supportedLocales: const [
+  ], supportedLocales: [
     Locale('en'),
     Locale('pl')
   ]));
 }
 
 class MyApp extends StatelessWidget {
+  const MyApp({super.key});
+
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
@@ -30,6 +39,8 @@ class MyApp extends StatelessWidget {
             return MaterialPageRoute(builder: (_) => const TransactionScreen());
           case '/lists':
             return MaterialPageRoute(builder: (_) => const ShoppingScreen());
+          case '/settings':
+            return MaterialPageRoute(builder: (_) => const SettingsScreen());
           default:
             return null;
         }

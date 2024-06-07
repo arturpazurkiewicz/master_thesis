@@ -8,6 +8,7 @@ import 'package:biedronka_extractor/model/shopping_list_full.dart';
 import 'package:biedronka_extractor/my_database.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../algorithm_factory/preprocessed_algorithm.dart';
 import '../model/recipe_full.dart';
@@ -21,7 +22,7 @@ class AlgorithmState {
   final UnprocessedAlgorithm unprocessedAlgorithm;
   PreprocessedAlgorithm? preprocessedAlgorithm;
   List<String> results = [];
-  AlgorithmStatus status = AlgorithmStatus.preprocessing;
+  AlgorithmStatus status = AlgorithmStatus.idle;
 
   AlgorithmState(this.name, this.unprocessedAlgorithm);
 }
@@ -41,22 +42,15 @@ class _SingleShoppingListScreenState extends State<SingleShoppingListScreen> {
   final TextEditingController _productAmountController = TextEditingController();
   List<String> _productNames = [];
   Map<int, String> _productIdsToNames = {};
-  bool _isExpanded = false;
 
-  final List<AlgorithmState> algorithms = [
-    AlgorithmState('Apriori', AprioriFactory(1.0)),
-    AlgorithmState('Apriori z czasem', AprioriWithTimeFactory(1.0)),
-    AlgorithmState('Podobieństwo kosinusowe', CosineSimilarityFactory(7)),
-    AlgorithmState('KNN', KNNFactory(7)),
-  ];
+  List<AlgorithmState> algorithms = [];
 
   @override
   void initState() {
     super.initState();
     _shoppingList = widget.shoppingList;
-    _loadProductNames().then((_) {
-      _preprocessAlgorithms();
-    });
+    _loadProductNames();
+    _loadAlgorithms();
   }
 
   Future<void> _loadProductNames() async {
@@ -65,6 +59,23 @@ class _SingleShoppingListScreenState extends State<SingleShoppingListScreen> {
       _productNames = products.map((product) => product.name).toList();
       _productIdsToNames = {for (var product in products) product.id!: product.name};
     });
+  }
+
+  Future<void> _loadAlgorithms() async {
+    final prefs = await SharedPreferences.getInstance();
+    int knn = prefs.getInt('knn') ?? 7;
+    int cosine = prefs.getInt('cosine') ?? 7;
+    double aprioriSupport = prefs.getDouble('aprioriSupport') ?? 2.0;
+    double aprioriTimeSupport = prefs.getDouble('aprioriTimeSupport') ?? 2.0;
+
+    algorithms = [
+      AlgorithmState('Apriori', AprioriFactory(aprioriSupport)),
+      AlgorithmState('Apriori z czasem', AprioriWithTimeFactory(aprioriTimeSupport)),
+      AlgorithmState('Podobieństwo kosinusowe', CosineSimilarityFactory(cosine)),
+      AlgorithmState('KNN', KNNFactory(knn)),
+    ];
+
+    _preprocessAlgorithms();
   }
 
   void _refreshShoppingList() async {
@@ -112,21 +123,22 @@ class _SingleShoppingListScreenState extends State<SingleShoppingListScreen> {
   Future<void> _preprocessAlgorithms() async {
     // Pobranie wszystkich transakcji z bazy danych
     List<RecipeFull> transactions = await MyDatabase.getAllRecipes();
-    for (var algorithm in algorithms) {
+
+    // Przetwarzanie równoległe
+    await Future.wait(algorithms.map((algorithmState) async {
       setState(() {
-        algorithm.status = AlgorithmStatus.preprocessing;
+        algorithmState.status = AlgorithmStatus.preprocessing;
       });
-      print('Preprocessing ${algorithm.name}...');
-      var futurePreprocessedAlgorithm = compute(_runPreprocess, _PreprocessParams(algorithm.unprocessedAlgorithm, transactions));
-      futurePreprocessedAlgorithm.then((preprocessedAlgorithm) {
-        setState(() {
-          algorithm.preprocessedAlgorithm = preprocessedAlgorithm;
-          algorithm.status = AlgorithmStatus.idle;
-        });
-        print('${algorithm.name} preprocessing completed.');
-        _proposeProductsForAlgorithm(algorithm); // Proponowanie produktów dla przetworzonego algorytmu
+      print('Preprocessing ${algorithmState.name}...');
+      final preprocessedAlgorithm = await compute(_runPreprocess, _PreprocessParams(algorithmState.unprocessedAlgorithm, transactions));
+      setState(() {
+        algorithmState.preprocessedAlgorithm = preprocessedAlgorithm;
+        algorithmState.status = AlgorithmStatus.idle;
       });
-    }
+      print('${algorithmState.name} preprocessing completed.');
+    }));
+
+    _proposeProducts();
   }
 
   static PreprocessedAlgorithm _runPreprocess(_PreprocessParams params) {
@@ -143,38 +155,39 @@ class _SingleShoppingListScreenState extends State<SingleShoppingListScreen> {
   }
 
   void _proposeProducts() {
+    Set<int> currentProducts = _shoppingList.entries.map((e) => e.product.id!).toSet();
+    DateTime shoppingDate = _shoppingList.shoppingList.date;
+
+    // Kalkulacja równoległa
     algorithms.forEach((algorithmState) {
-      _proposeProductsForAlgorithm(algorithmState);
-    });
-  }
+      final algorithmName = algorithmState.name;
+      final preprocessedAlgorithm = algorithmState.preprocessedAlgorithm;
 
-  void _proposeProductsForAlgorithm(AlgorithmState algorithmState) {
-    final algorithmName = algorithmState.name;
-    final preprocessedAlgorithm = algorithmState.preprocessedAlgorithm;
+      if (preprocessedAlgorithm == null) {
+        return;
+      }
 
-    if (preprocessedAlgorithm == null || !_isExpanded) {
-      return;
-    }
-
-    setState(() {
-      algorithmState.status = AlgorithmStatus.processing;
-    });
-
-    print('Calculating $algorithmName...');
-
-    final params = _AlgorithmParams(
-      preprocessedAlgorithm,
-      _shoppingList.entries.map((e) => e.product.id!).toSet(),
-      _shoppingList.shoppingList.date,
-      _productIdsToNames,
-    );
-    _calculateProductsInIsolate(params).then((productNames) {
-      productNames.sort();
       setState(() {
-        algorithmState.results = productNames;
-        algorithmState.status = AlgorithmStatus.idle;
+        algorithmState.status = AlgorithmStatus.processing;
       });
-      print('$algorithmName calculation completed.');
+
+      print('Calculating $algorithmName...');
+
+      final params = _AlgorithmParams(
+        preprocessedAlgorithm,
+        currentProducts,
+        shoppingDate,
+        _productIdsToNames,
+      );
+
+      _calculateProductsInIsolate(params).then((productNames) {
+        productNames.sort();
+        setState(() {
+          algorithmState.results = productNames;
+          algorithmState.status = AlgorithmStatus.idle;
+        });
+        print('$algorithmName calculation completed.');
+      });
     });
   }
 
@@ -195,7 +208,6 @@ class _SingleShoppingListScreenState extends State<SingleShoppingListScreen> {
           ExpansionTile(
             title: const Text("Propozycje"),
             onExpansionChanged: (bool expanded) {
-              _isExpanded = expanded;
               if (expanded) {
                 _proposeProducts(); // Przelicz propozycje po otwarciu sekcji
               }

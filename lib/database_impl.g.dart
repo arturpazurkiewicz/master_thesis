@@ -99,7 +99,7 @@ class _$FlutterDatabase extends FlutterDatabase {
         await database
             .execute('CREATE TABLE IF NOT EXISTS `ShoppingList` (`id` INTEGER PRIMARY KEY AUTOINCREMENT, `date` INTEGER NOT NULL, `name` TEXT NOT NULL)');
         await database.execute(
-            'CREATE TABLE IF NOT EXISTS `ShoppingListEntry` (`id` INTEGER PRIMARY KEY AUTOINCREMENT, `productId` INTEGER NOT NULL, `shoppingListId` INTEGER NOT NULL, `amount` REAL NOT NULL, FOREIGN KEY (`shoppingListId`) REFERENCES `ShoppingList` (`id`) ON UPDATE NO ACTION ON DELETE CASCADE, FOREIGN KEY (`productId`) REFERENCES `Product` (`id`) ON UPDATE NO ACTION ON DELETE NO ACTION)');
+            'CREATE TABLE IF NOT EXISTS `ShoppingListEntry` (`id` INTEGER PRIMARY KEY AUTOINCREMENT, `productId` INTEGER NOT NULL, `shoppingListId` INTEGER NOT NULL, `amount` REAL NOT NULL, `marked` INTEGER NOT NULL, FOREIGN KEY (`shoppingListId`) REFERENCES `ShoppingList` (`id`) ON UPDATE NO ACTION ON DELETE CASCADE, FOREIGN KEY (`productId`) REFERENCES `Product` (`id`) ON UPDATE NO ACTION ON DELETE NO ACTION)');
         await database.execute('CREATE UNIQUE INDEX `index_Product_name` ON `Product` (`name`)');
 
         await callback?.onCreate?.call(database, version);
@@ -138,8 +138,7 @@ class _$RecipeDao extends RecipeDao {
   _$RecipeDao(
     this.database,
     this.changeListener,
-  )
-      : _queryAdapter = QueryAdapter(database),
+  )   : _queryAdapter = QueryAdapter(database),
         _recipeInsertionAdapter =
             InsertionAdapter(database, 'Recipe', (Recipe item) => <String, Object?>{'id': item.id, 'time': _dateTimeConverter.encode(item.time)}),
         _recipeDeletionAdapter =
@@ -187,8 +186,7 @@ class _$RecipeEntryDao extends RecipeEntryDao {
   _$RecipeEntryDao(
     this.database,
     this.changeListener,
-  )
-      : _queryAdapter = QueryAdapter(database),
+  )   : _queryAdapter = QueryAdapter(database),
         _recipeEntryInsertionAdapter = InsertionAdapter(database, 'RecipeEntry',
             (RecipeEntry item) => <String, Object?>{'id': item.id, 'productId': item.productId, 'amount': item.amount, 'recipeId': item.recipeId}),
         _recipeEntryDeletionAdapter = DeletionAdapter(database, 'RecipeEntry', ['id'],
@@ -212,14 +210,20 @@ class _$RecipeEntryDao extends RecipeEntryDao {
 
   @override
   Future<List<RecipeEntry>> getForRecipeId(int recipeId) async {
-    return _queryAdapter.queryList(
-        'SELECT * FROM RecipeEntry WHERE recipeId = ?1 ORDER BY id',
-        mapper: (Map<String, Object?> row) => RecipeEntry(
-            row['id'] as int?,
-            row['productId'] as int,
-            row['amount'] as double,
-            row['recipeId'] as int),
+    return _queryAdapter.queryList('SELECT * FROM RecipeEntry WHERE recipeId = ?1 ORDER BY id',
+        mapper: (Map<String, Object?> row) => RecipeEntry(row['id'] as int?, row['productId'] as int, row['amount'] as double, row['recipeId'] as int),
         arguments: [recipeId]);
+  }
+
+  @override
+  Future<void> replaceProducts(
+    int newProduct,
+    List<int> toReplace,
+  ) async {
+    const offset = 2;
+    final _sqliteVariablesForToReplace = Iterable<String>.generate(toReplace.length, (i) => '?${i + offset}').join(',');
+    await _queryAdapter.queryNoReturn('UPDATE RecipeEntry SET productId = ?1 WHERE productId in (' + _sqliteVariablesForToReplace + ')',
+        arguments: [newProduct, ...toReplace]);
   }
 
   @override
@@ -242,12 +246,10 @@ class _$ProductDao extends ProductDao {
   _$ProductDao(
     this.database,
     this.changeListener,
-  )   : _queryAdapter = QueryAdapter(database),
-        _productInsertionAdapter = InsertionAdapter(
-            database,
-            'Product',
-            (Product item) =>
-                <String, Object?>{'id': item.id, 'name': item.name});
+  )
+      : _queryAdapter = QueryAdapter(database),
+        _productInsertionAdapter = InsertionAdapter(database, 'Product', (Product item) => <String, Object?>{'id': item.id, 'name': item.name}),
+        _productDeletionAdapter = DeletionAdapter(database, 'Product', ['id'], (Product item) => <String, Object?>{'id': item.id, 'name': item.name});
 
   final sqflite.DatabaseExecutor database;
 
@@ -257,19 +259,18 @@ class _$ProductDao extends ProductDao {
 
   final InsertionAdapter<Product> _productInsertionAdapter;
 
+  final DeletionAdapter<Product> _productDeletionAdapter;
+
   @override
   Future<Product?> getProduct(int id) async {
-    return _queryAdapter.query('SELECT * FROM Product WHERE id=?1',
-        mapper: (Map<String, Object?> row) =>
-            Product(row['id'] as int?, row['name'] as String),
-        arguments: [id]);
+    return _queryAdapter
+        .query('SELECT * FROM Product WHERE id=?1', mapper: (Map<String, Object?> row) => Product(row['id'] as int?, row['name'] as String), arguments: [id]);
   }
 
   @override
   Future<Product?> getProductByName(String name) async {
     return _queryAdapter.query('SELECT * FROM Product WHERE name=?1',
-        mapper: (Map<String, Object?> row) =>
-            Product(row['id'] as int?, row['name'] as String), arguments: [name]);
+        mapper: (Map<String, Object?> row) => Product(row['id'] as int?, row['name'] as String), arguments: [name]);
   }
 
   @override
@@ -289,6 +290,11 @@ class _$ProductDao extends ProductDao {
   @override
   Future<int> insertProduct(Product entryData) {
     return _productInsertionAdapter.insertAndReturnId(entryData, OnConflictStrategy.abort);
+  }
+
+  @override
+  Future<void> deleteProducts(List<Product> products) async {
+    await _productDeletionAdapter.deleteList(products);
   }
 }
 
@@ -346,18 +352,40 @@ class _$ShoppingListEntryDao extends ShoppingListEntryDao {
   _$ShoppingListEntryDao(
     this.database,
     this.changeListener,
-  )   : _queryAdapter = QueryAdapter(database),
+  )
+      : _queryAdapter = QueryAdapter(database),
         _shoppingListEntryInsertionAdapter = InsertionAdapter(
             database,
             'ShoppingListEntry',
-            (ShoppingListEntry item) =>
-                <String, Object?>{'id': item.id, 'productId': item.productId, 'shoppingListId': item.shoppingListId, 'amount': item.amount}),
+            (ShoppingListEntry item) => <String, Object?>{
+                  'id': item.id,
+                  'productId': item.productId,
+                  'shoppingListId': item.shoppingListId,
+                  'amount': item.amount,
+                  'marked': item.marked ? 1 : 0
+                }),
+        _shoppingListEntryUpdateAdapter = UpdateAdapter(
+            database,
+            'ShoppingListEntry',
+            ['id'],
+            (ShoppingListEntry item) => <String, Object?>{
+                  'id': item.id,
+                  'productId': item.productId,
+                  'shoppingListId': item.shoppingListId,
+                  'amount': item.amount,
+                  'marked': item.marked ? 1 : 0
+                }),
         _shoppingListEntryDeletionAdapter = DeletionAdapter(
             database,
             'ShoppingListEntry',
             ['id'],
-            (ShoppingListEntry item) =>
-                <String, Object?>{'id': item.id, 'productId': item.productId, 'shoppingListId': item.shoppingListId, 'amount': item.amount});
+            (ShoppingListEntry item) => <String, Object?>{
+                  'id': item.id,
+                  'productId': item.productId,
+                  'shoppingListId': item.shoppingListId,
+                  'amount': item.amount,
+                  'marked': item.marked ? 1 : 0
+                });
 
   final sqflite.DatabaseExecutor database;
 
@@ -367,13 +395,15 @@ class _$ShoppingListEntryDao extends ShoppingListEntryDao {
 
   final InsertionAdapter<ShoppingListEntry> _shoppingListEntryInsertionAdapter;
 
+  final UpdateAdapter<ShoppingListEntry> _shoppingListEntryUpdateAdapter;
+
   final DeletionAdapter<ShoppingListEntry> _shoppingListEntryDeletionAdapter;
 
   @override
   Future<ShoppingListEntry?> getShoppingListEntry(int id) async {
     return _queryAdapter.query('SELECT * FROM ShoppingListEntry WHERE id = ?1',
         mapper: (Map<String, Object?> row) =>
-            ShoppingListEntry(row['id'] as int?, row['productId'] as int, row['shoppingListId'] as int, row['amount'] as double),
+            ShoppingListEntry(row['id'] as int?, row['productId'] as int, row['shoppingListId'] as int, row['amount'] as double, (row['marked'] as int) != 0),
         arguments: [id]);
   }
 
@@ -381,7 +411,7 @@ class _$ShoppingListEntryDao extends ShoppingListEntryDao {
   Future<List<ShoppingListEntry>> getShoppingListEntriesByShoppingListId(int shoppingListId) async {
     return _queryAdapter.queryList('SELECT * FROM ShoppingListEntry WHERE shoppingListId = ?1 ORDER BY id',
         mapper: (Map<String, Object?> row) =>
-            ShoppingListEntry(row['id'] as int?, row['productId'] as int, row['shoppingListId'] as int, row['amount'] as double),
+            ShoppingListEntry(row['id'] as int?, row['productId'] as int, row['shoppingListId'] as int, row['amount'] as double, (row['marked'] as int) != 0),
         arguments: [shoppingListId]);
   }
 
@@ -389,7 +419,7 @@ class _$ShoppingListEntryDao extends ShoppingListEntryDao {
   Future<List<ShoppingListEntry>> getShoppingListEntriesByProductId(int productId) async {
     return _queryAdapter.queryList('SELECT * FROM ShoppingListEntry WHERE productId = ?1 ORDER BY id',
         mapper: (Map<String, Object?> row) =>
-            ShoppingListEntry(row['id'] as int?, row['productId'] as int, row['shoppingListId'] as int, row['amount'] as double),
+            ShoppingListEntry(row['id'] as int?, row['productId'] as int, row['shoppingListId'] as int, row['amount'] as double, (row['marked'] as int) != 0),
         arguments: [productId]);
   }
 
@@ -397,7 +427,7 @@ class _$ShoppingListEntryDao extends ShoppingListEntryDao {
   Future<List<ShoppingListEntry>> getAllShoppingListEntries() async {
     return _queryAdapter.queryList('SELECT * FROM ShoppingListEntry ORDER BY id',
         mapper: (Map<String, Object?> row) =>
-            ShoppingListEntry(row['id'] as int?, row['productId'] as int, row['shoppingListId'] as int, row['amount'] as double));
+            ShoppingListEntry(row['id'] as int?, row['productId'] as int, row['shoppingListId'] as int, row['amount'] as double, (row['marked'] as int) != 0));
   }
 
   @override
@@ -411,8 +441,24 @@ class _$ShoppingListEntryDao extends ShoppingListEntryDao {
   }
 
   @override
+  Future<void> replaceProductsInShopping(
+    int newProduct,
+    List<int> toReplace,
+  ) async {
+    const offset = 2;
+    final _sqliteVariablesForToReplace = Iterable<String>.generate(toReplace.length, (i) => '?${i + offset}').join(',');
+    await _queryAdapter.queryNoReturn('UPDATE ShoppingListEntry SET productId = ?1 WHERE productId in (' + _sqliteVariablesForToReplace + ')',
+        arguments: [newProduct, ...toReplace]);
+  }
+
+  @override
   Future<int> insertShoppingListEntry(ShoppingListEntry shoppingListEntry) {
     return _shoppingListEntryInsertionAdapter.insertAndReturnId(shoppingListEntry, OnConflictStrategy.abort);
+  }
+
+  @override
+  Future<void> updateShoppingListEntry(ShoppingListEntry shoppingListEntry) async {
+    await _shoppingListEntryUpdateAdapter.update(shoppingListEntry, OnConflictStrategy.abort);
   }
 
   @override

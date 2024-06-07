@@ -12,6 +12,11 @@ class ShoppingListEntry {
   int productId;
   int shoppingListId;
   double amount;
+  bool marked;
 
-  ShoppingListEntry(this.id, this.productId, this.shoppingListId, this.amount);
+  ShoppingListEntry(this.id, this.productId, this.shoppingListId, this.amount, this.marked);
+
+  void toggleMarked() {
+    marked = !marked;
+  }
 }
