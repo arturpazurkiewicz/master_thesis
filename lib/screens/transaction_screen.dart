@@ -34,7 +34,6 @@ class _TransactionScreenState extends State<TransactionScreen> {
   }
 
   void _deleteSelectedRecipes() async {
-    var r = _recipes;
     var selectedRecipes = _selectedIndexes.map((e) => _recipes[e]);
     await MyDatabase.deleteRecipes(selectedRecipes.map((e) => e.recipe));
 

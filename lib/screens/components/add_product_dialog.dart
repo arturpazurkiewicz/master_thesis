@@ -28,11 +28,6 @@ class _AddProductDialogState extends State<AddProductDialog> {
       content: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          TextField(
-            controller: widget.productAmountController,
-            decoration: const InputDecoration(labelText: "Ilość"),
-            keyboardType: TextInputType.number,
-          ),
           Autocomplete<String>(
             optionsBuilder: (TextEditingValue textEditingValue) {
               if (textEditingValue.text.isEmpty) {
@@ -58,6 +53,11 @@ class _AddProductDialogState extends State<AddProductDialog> {
                 },
               );
             },
+          ),
+          TextField(
+            controller: widget.productAmountController,
+            decoration: const InputDecoration(labelText: "Ilość"),
+            keyboardType: TextInputType.number,
           ),
         ],
       ),

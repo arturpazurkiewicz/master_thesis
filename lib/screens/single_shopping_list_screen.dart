@@ -42,7 +42,6 @@ class _SingleShoppingListScreenState extends State<SingleShoppingListScreen> {
   final TextEditingController _productAmountController = TextEditingController();
   List<String> _productNames = [];
   Map<int, String> _productIdsToNames = {};
-
   List<AlgorithmState> algorithms = [];
 
   @override
@@ -101,9 +100,15 @@ class _SingleShoppingListScreenState extends State<SingleShoppingListScreen> {
     _refreshShoppingList();
   }
 
+  void _toggleMarked(ShoppingListEntryFull entry) async {
+    entry.entry.toggleMarked();
+    await MyDatabase.updateShoppingListEntry(entry.entry);
+    _refreshShoppingList();
+  }
+
   void _showAddProductDialog() {
     _productNameController.clear();
-    _productAmountController.clear();
+    _productAmountController.text = '1';
 
     showDialog(
       context: context,
@@ -198,6 +203,10 @@ class _SingleShoppingListScreenState extends State<SingleShoppingListScreen> {
         title: Text("Lista zakupowa ${_shoppingList.shoppingList.date}"),
         actions: [
           IconButton(
+            icon: const Icon(Icons.sync),
+            onPressed: _preprocessAlgorithms,
+          ),
+          IconButton(
             icon: const Icon(Icons.delete),
             onPressed: _deleteShoppingList,
           ),
@@ -247,6 +256,12 @@ class _SingleShoppingListScreenState extends State<SingleShoppingListScreen> {
               itemBuilder: (context, index) {
                 final entry = _shoppingList.entries[index];
                 return ListTile(
+                  leading: Checkbox(
+                    value: entry.entry.marked,
+                    onChanged: (bool? value) {
+                      _toggleMarked(entry);
+                    },
+                  ),
                   title: Text(entry.product.name),
                   subtitle: Text('Ilość: ${entry.entry.amount}'),
                   trailing: IconButton(
