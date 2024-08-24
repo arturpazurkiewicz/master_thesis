@@ -3,6 +3,7 @@ import 'package:biedronka_extractor/model/recipe_entry_full.dart';
 import 'package:biedronka_extractor/model/recipe_full.dart';
 import 'package:biedronka_extractor/my_database.dart';
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 
 import 'components/add_product_dialog.dart';
 
@@ -80,7 +81,7 @@ class _SingleTransactionScreenState extends State<SingleTransactionScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text("Transakcja ${_recipe.recipe.time}"),
+        title: Text(DateFormat('dd MMMM yyyy, HH:mm', 'pl').format(_recipe.recipe.time)),
         actions: [
           IconButton(
             icon: const Icon(Icons.delete),

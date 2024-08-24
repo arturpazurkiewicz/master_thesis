@@ -12,11 +12,17 @@ class Apriori {
   List<List<List<int>>> frequentSet = [];
 
   List<AssociationRule> associationRules = [];
+  Map<int, String> nameMap = {};
 
   int nowStep = 0;
 
   Apriori(this.minSupport, this.transactions) {
     frequentSet.add([[]]);
+    for (var transaction in transactions) {
+      for (var element in transaction.entries) {
+        nameMap[element.product.id!] = element.product.name;
+      }
+    }
   }
 
   List<List<int>> prepareElements() {
@@ -76,6 +82,55 @@ class Apriori {
     }
   }
 
+  String toNameString(int value) {
+    if (value >= 0) {
+      return nameMap[value]!;
+    } else {
+      switch (value) {
+        case -1:
+          return "Styczeń";
+        case -2:
+          return "Luty";
+        case -3:
+          return "Marzec";
+        case -4:
+          return "Kwiecień";
+        case -5:
+          return "Maj";
+        case -6:
+          return "Czerwiec";
+        case -7:
+          return "Lipiec";
+        case -8:
+          return "Sierpień";
+        case -9:
+          return "Wrzesień";
+        case -10:
+          return "Październik";
+        case -11:
+          return "Listopad";
+        case -12:
+          return "Grudzień";
+        case -13:
+          return "Poniedziałek";
+        case -14:
+          return "Wtorek";
+        case -15:
+          return "Środa";
+        case -16:
+          return "Czwartek";
+        case -17:
+          return "Piątek";
+        case -18:
+          return "Sobota";
+        case -19:
+          return "Niedziela";
+        default:
+          return "??";
+      }
+    }
+  }
+
   void generateAssociationRule(List<int> items, List<int> X, List<int> Y, int index) {
     if (index == items.length) {
       if (X.isEmpty || Y.isEmpty) return;
@@ -87,7 +142,7 @@ class Apriori {
 
       double support = XYsupport; // W Darcie typ double obejmuje również wartości long double z C++
       double confidence = XYsupport / Xsupport * 100.0;
-      associationRules.add(AssociationRule(X, Y, support, confidence));
+      associationRules.add(AssociationRule(X, Y, support, confidence, X.map((e) => toNameString(e)).toList(), Y.map((e) => toNameString(e)).toList()));
       return;
     }
 
@@ -219,17 +274,24 @@ class Apriori {
 
 class AssociationRule {
   List<int> base;
+  List<String> baseString;
+  List<String> addString;
   List<int> add;
   double support;
   double confidence;
 
-  AssociationRule(this.base, this.add, this.support, this.confidence);
+  AssociationRule(this.base, this.add, this.support, this.confidence, this.baseString, this.addString);
 
   double calculateWeight() {
     return confidence;
   }
 
   AssociationRule clone() {
-    return AssociationRule(base.toList(), add.toList(), support, confidence);
+    return AssociationRule(base.toList(), add.toList(), support, confidence, baseString.toList(), addString.toList());
+  }
+
+  @override
+  String toString() {
+    return "${baseString} => ${addString}";
   }
 }

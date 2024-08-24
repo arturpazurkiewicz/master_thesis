@@ -84,7 +84,7 @@ class _ShoppingScreenState extends State<ShoppingScreen> {
                     locale: const Locale('pl'),
                   );
                   if (selectedDate != null) {
-                    _dateController.text = DateFormat('dd-MM-yyyy').format(selectedDate!);
+                    _dateController.text = DateFormat('dd.MM.yyyy').format(selectedDate!);
                   }
                 },
               ),
@@ -103,7 +103,7 @@ class _ShoppingScreenState extends State<ShoppingScreen> {
                 String date = _dateController.text;
 
                 // Add new shopping list
-                await MyDatabase.insertShoppingList(name, DateFormat('dd-MM-yyyy').parse(date));
+                await MyDatabase.insertShoppingList(name, DateFormat('dd.MM.yyyy').parse(date));
                 Navigator.of(context).pop();
                 loadAllEntries();
               },
@@ -150,7 +150,7 @@ class _ShoppingScreenState extends State<ShoppingScreen> {
               subtitle: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('Data: ${DateFormat('dd-MM-yyyy').format(_shoppingLists[index].date)}'),
+                  Text('Data: ${DateFormat('dd.MM.yyyy').format(_shoppingLists[index].date)}'),
                   FutureBuilder<int>(
                     future: MyDatabase.getShoppingListItemCount(_shoppingLists[index].id!),
                     builder: (context, snapshot) {

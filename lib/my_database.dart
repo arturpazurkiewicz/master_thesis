@@ -57,6 +57,11 @@ class MyDatabase {
     return db.productDao.getProductOrInsert(name);
   }
 
+  static Future<List<Product>> getProducts(Set<int> ids) async {
+    var db = await _getInstance();
+    return db.productDao.getProducts(ids.toList());
+  }
+
   static Future<RecipeFull> getRecipe(int id) async {
     var db = await _getInstance();
     var recipe = await db.recipeDao.getRecipe(id);
@@ -135,6 +140,8 @@ class MyDatabase {
     if (mainProduct == null) {
       return;
     }
+    var z = (await db.productDao.getProducts(secondaryProductIds)).map((e) => "„${e.name}”");
+    if (z.isNotEmpty) print("Merging: „${mainProduct.name}” <- ${z.reduce((value, element) => value + ", " + element)}");
 
     var toReplace = await db.productDao.getProducts(secondaryProductIds);
 

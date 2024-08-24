@@ -3,6 +3,7 @@ import 'package:biedronka_extractor/model/recipe_full.dart';
 import 'package:biedronka_extractor/my_database.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'package:loading_indicator/loading_indicator.dart';
 
 import 'single_transaction_screen.dart';
@@ -95,13 +96,16 @@ class _TransactionScreenState extends State<TransactionScreen> {
         allowedExtensions: ['pdf'],
       );
 
-      List<RecipeFull> recipes = [];
       if (result != null) {
         for (var file in result.files) {
           var recipe = await _ocr.runOCR(file);
-          if (recipe != null) recipes.add(recipe);
+          print("Found ${recipe?.entries.length}");
+          if (recipe != null) {
+            await MyDatabase.saveFullRecipes([recipe]);
+            loadAllEntries();
+          }
+          ;
         }
-        await MyDatabase.saveFullRecipes(recipes);
       }
 
       loadAllEntries();
@@ -147,7 +151,7 @@ class _TransactionScreenState extends State<TransactionScreen> {
           return GestureDetector(
             onLongPress: () => _toggleSelection(index),
             child: ListTile(
-              title: Text(_recipes[index].recipe.time.toString()),
+              title: Text(DateFormat('dd MMMM yyyy, HH:mm', 'pl').format(_recipes[index].recipe.time)),
               subtitle: Text('Ilość pozycji: ${_recipes[index].entries.length}'),
               trailing: _isSelectionMode
                   ? Checkbox(

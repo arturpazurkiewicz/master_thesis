@@ -8,6 +8,7 @@ import 'package:biedronka_extractor/model/shopping_list_full.dart';
 import 'package:biedronka_extractor/my_database.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../algorithm_factory/preprocessed_algorithm.dart';
@@ -200,7 +201,7 @@ class _SingleShoppingListScreenState extends State<SingleShoppingListScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text("Lista zakupowa ${_shoppingList.shoppingList.date}"),
+        title: Text("${_shoppingList.shoppingList.name} (${DateFormat('dd.MM.yyyy').format(_shoppingList.shoppingList.date)})"),
         actions: [
           IconButton(
             icon: const Icon(Icons.sync),

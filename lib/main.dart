@@ -3,10 +3,12 @@ import 'package:biedronka_extractor/screens/settings_screen.dart';
 import 'package:biedronka_extractor/screens/shopping_screen.dart';
 import 'package:biedronka_extractor/screens/transaction_screen.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 
 main() {
+  debugPaintSizeEnabled = false; // Disable the debug banner
   WidgetsFlutterBinding.ensureInitialized();
   SystemChrome.setPreferredOrientations([
     DeviceOrientation.portraitUp,
@@ -30,6 +32,7 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+      debugShowCheckedModeBanner: false,
       title: 'PDF OCR',
       theme: ThemeData(
         primarySwatch: Colors.blue,

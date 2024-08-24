@@ -246,8 +246,7 @@ class _$ProductDao extends ProductDao {
   _$ProductDao(
     this.database,
     this.changeListener,
-  )
-      : _queryAdapter = QueryAdapter(database),
+  )   : _queryAdapter = QueryAdapter(database),
         _productInsertionAdapter = InsertionAdapter(database, 'Product', (Product item) => <String, Object?>{'id': item.id, 'name': item.name}),
         _productDeletionAdapter = DeletionAdapter(database, 'Product', ['id'], (Product item) => <String, Object?>{'id': item.id, 'name': item.name});
 
@@ -352,8 +351,7 @@ class _$ShoppingListEntryDao extends ShoppingListEntryDao {
   _$ShoppingListEntryDao(
     this.database,
     this.changeListener,
-  )
-      : _queryAdapter = QueryAdapter(database),
+  )   : _queryAdapter = QueryAdapter(database),
         _shoppingListEntryInsertionAdapter = InsertionAdapter(
             database,
             'ShoppingListEntry',
