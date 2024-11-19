@@ -32,8 +32,8 @@ class SettingsScreenState extends State<SettingsScreen> {
     setState(() {
       _knnController.text = (prefs.getInt('knn') ?? 7).toString();
       _cosineController.text = (prefs.getInt('cosine') ?? 7).toString();
-      _aprioriSupportController.text = (prefs.getDouble('aprioriSupport') ?? 2.0).toString();
-      _aprioriTimeSupportController.text = (prefs.getDouble('aprioriTimeSupport') ?? 2.0).toString();
+      _aprioriSupportController.text = (prefs.getDouble('aprioriSupport') ?? 3.0).toString();
+      _aprioriTimeSupportController.text = (prefs.getDouble('aprioriTimeSupport') ?? 3.0).toString();
       _levenshteinController.text = (prefs.getInt('levenshtein') ?? 2).toString();
     });
   }

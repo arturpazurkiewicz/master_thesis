@@ -65,8 +65,8 @@ class _SingleShoppingListScreenState extends State<SingleShoppingListScreen> {
     final prefs = await SharedPreferences.getInstance();
     int knn = prefs.getInt('knn') ?? 7;
     int cosine = prefs.getInt('cosine') ?? 7;
-    double aprioriSupport = prefs.getDouble('aprioriSupport') ?? 2.0;
-    double aprioriTimeSupport = prefs.getDouble('aprioriTimeSupport') ?? 2.0;
+    double aprioriSupport = prefs.getDouble('aprioriSupport') ?? 3.0;
+    double aprioriTimeSupport = prefs.getDouble('aprioriTimeSupport') ?? 3.0;
 
     algorithms = [
       AlgorithmState('Apriori', AprioriFactory(aprioriSupport)),

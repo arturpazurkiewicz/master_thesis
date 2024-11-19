@@ -1,5 +1,3 @@
-import 'dart:ffi';
-
 import 'package:biedronka_extractor/model/product.dart';
 import 'package:biedronka_extractor/model/recipe.dart';
 import 'package:biedronka_extractor/model/recipe_entry_full.dart';
@@ -12,15 +10,19 @@ class TextExtractor {
   final RegExp dateRegex = RegExp(r'\d{2}.\d{2}.\d{4} \d{2}:\d{2}');
   final DateFormat dateFormat = DateFormat('dd.MM.yyyy HH:mm');
 
+  String normalizeDate(String input) {
+    return input.replaceAll(RegExp(r'[./-]'), '.');
+  }
+
   DateTime? extractDate(String text) {
     var match = dateRegex.firstMatch(text);
     if (match != null) {
-      return dateFormat.parse(match.group(0)!);
+      return dateFormat.parse(normalizeDate(match.group(0)!));
     }
     return null;
   }
 
-  final RegExp itemRegex = RegExp(r'^(?<name>[\S ]*?\S)\s+\w\s+(?<value>\d+\.\d+)\s*x', multiLine: true);
+  final RegExp itemRegex = RegExp(r'^(?<name>[\S ]*?\S)\s+\S+\s+(?<value>\d+(\.\d+)?)\s*x', multiLine: true);
 
   RecipeFull extractRecipe(String text, DateTime time) {
     List<RecipeEntryFull> result = [];
